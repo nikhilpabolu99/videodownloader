@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Any Video Downloader</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
     body {
       margin: 0;
@@ -16,16 +16,27 @@
       height: 100vh;
     }
 
-    /* Floating text styles */
+    #floating-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      z-index: 1;
+      pointer-events: none;
+    }
+
     .floating-text {
       position: absolute;
       color: rgba(255, 255, 255, 0.08);
       font-weight: 600;
       pointer-events: none;
-      animation: floatUp 20s linear infinite;
+      animation: floatUp 15s linear infinite;
       white-space: nowrap;
       user-select: none;
       will-change: transform, opacity;
+      animation-fill-mode: forwards;
     }
 
     @keyframes floatUp {
@@ -40,12 +51,11 @@
         opacity: 1;
       }
       100% {
-        transform: translateY(-20vh);
+        transform: translateY(-30vh);
         opacity: 0;
       }
     }
 
-    /* Container box styles */
     .container {
       background-color: rgba(0, 0, 0, 0.4);
       border-radius: 15px;
@@ -56,6 +66,15 @@
       position: relative;
       z-index: 2;
       text-align: center;
+      user-select: none;
+    }
+
+    .container .footer-text {
+      margin-top: 1.5rem;
+      font-weight: 600;
+      font-size: 1.1rem;
+      color: #ff9800;
+      font-family: 'Inter', sans-serif;
     }
 
     input[type="text"] {
@@ -98,27 +117,6 @@
       font-size: 1.2rem;
       font-weight: 600;
     }
-
-    /* Static "Mehernolan!" text inside container */
-    .signature {
-      margin-top: 2rem;
-      font-weight: 700;
-      font-size: 1.2rem;
-      color: #ffcc80;
-      user-select: none;
-    }
-
-    /* Floating container fills whole screen and sits behind main content */
-    #floating-container {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      overflow: hidden;
-      z-index: 1;
-      pointer-events: none;
-    }
   </style>
 </head>
 <body>
@@ -129,18 +127,18 @@
   <!-- Main Interface -->
   <div class="container">
     <h1>Universal Video Downloader</h1>
-    <input type="text" id="video-url" placeholder="Paste your video URL here..." />
-    <br />
+    <input type="text" id="video-url" placeholder="Paste your video URL here...">
+    <br>
     <button onclick="fetchInfo()">Fetch Qualities</button>
 
     <div id="result" class="hidden">
       <p class="video-title" id="title"></p>
       <select id="format-options"></select>
-      <br />
+      <br>
       <button onclick="downloadVideo()">Download</button>
     </div>
 
-    <p class="signature">Mehernolan!</p>
+    <div class="footer-text">Mehernolan!</div>
   </div>
 
   <script>
@@ -172,20 +170,16 @@
       window.location.href = `/download?url=${encodeURIComponent(url)}&format_id=${formatId}`;
     }
 
-    // Floating text animation setup
+    // Floating text animation: mehernolan words float up from bottom
     const floatingContainer = document.getElementById("floating-container");
-    const word = "mehernolan";
 
     for (let i = 0; i < 100; i++) {
       const span = document.createElement("span");
       span.className = "floating-text";
-      // random left position across viewport
       span.style.left = Math.random() * 100 + "vw";
-      // random animation delay for staggered effect
-      span.style.animationDelay = (Math.random() * 20) + "s";
-      // random font size from 12px to 32px
+      span.style.animationDelay = (Math.random() * 15) + "s";
       span.style.fontSize = (Math.random() * 20 + 12) + "px";
-      span.innerText = word;
+      span.innerText = "mehernolan";
       floatingContainer.appendChild(span);
     }
   </script>
