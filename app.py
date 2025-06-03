@@ -1,10 +1,14 @@
 # app.py
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify, send_file, render_template
 import yt_dlp
 import os
 from uuid import uuid4
 
 app = Flask(__name__)
+
+@app.route('/')
+def index():
+    return render_template('index.html')  # or return "Hello, world!"
 
 @app.route('/fetch-info')
 def fetch_info():
