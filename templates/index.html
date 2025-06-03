@@ -22,21 +22,25 @@
       color: rgba(255, 255, 255, 0.08);
       font-weight: 600;
       pointer-events: none;
-      animation: float 20s linear infinite;
+      animation: floatUp 20s linear infinite;
       white-space: nowrap;
       user-select: none;
+      will-change: transform, opacity;
     }
 
-    @keyframes float {
+    @keyframes floatUp {
       0% {
-        transform: translateY(0vh);
+        transform: translateY(100vh);
         opacity: 0;
       }
       10% {
         opacity: 1;
       }
+      90% {
+        opacity: 1;
+      }
       100% {
-        transform: translateY(-120vh);
+        transform: translateY(-20vh);
         opacity: 0;
       }
     }
@@ -175,8 +179,11 @@
     for (let i = 0; i < 100; i++) {
       const span = document.createElement("span");
       span.className = "floating-text";
+      // random left position across viewport
       span.style.left = Math.random() * 100 + "vw";
+      // random animation delay for staggered effect
       span.style.animationDelay = (Math.random() * 20) + "s";
+      // random font size from 12px to 32px
       span.style.fontSize = (Math.random() * 20 + 12) + "px";
       span.innerText = word;
       floatingContainer.appendChild(span);
