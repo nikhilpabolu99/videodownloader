@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Universal Video Downloader</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(to right, #1e3c72, #2a5298);
+      color: #fff;
+      text-align: center;
+      padding: 2rem;
+    }
+    .container {
+      background-color: rgba(0, 0, 0, 0.4);
+      border-radius: 15px;
+      padding: 2rem;
+      max-width: 600px;
+      margin: 0 auto;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    }
+    input[type="text"] {
+      width: 80%;
+      padding: 0.8rem;
+      border: none;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      font-size: 1rem;
+    }
+    button {
+      padding: 0.7rem 1.5rem;
+      background-color: #ff9800;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    button:hover {
+      background-color: #f57c00;
+    }
+    select {
+      padding: 0.5rem;
+      border-radius: 8px;
+      margin-top: 1rem;
+      font-size: 1rem;
+    }
+    .hidden {
+      display: none;
+    }
+    .video-title {
+      margin-top: 1rem;
+      font-size: 1.2rem;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Universal Video Downloader</h1>
+    <input type="text" id="video-url" placeholder="Paste your video URL here...">
+    <br>
+    <button onclick="fetchInfo()">Fetch Qualities</button>
+
+    <div id="result" class="hidden">
+      <p class="video-title" id="title"></p>
+      <select id="format-options"></select>
+      <br>
+      <button onclick="downloadVideo()">Download</button>
+    </div>
+  </div>
+
+  <script>
+    async function fetchInfo() {
+      const url = document.getElementById('video-url').value;
+      if (!url) return alert("Please paste a video URL");
+
+      const res = await fetch(`/fetch-info?url=" + encodeURIComponent(url));
+      if (!res.ok) return alert("Error fetching video info.");
+      const data = await res.json();
+
+      document.getElementById('title').innerText = data.title;
+
+      const select = document.getElementById('format-options');
+      select.innerHTML = '';
+      data.formats.forEach(format => {
+        const option = document.createElement('option');
+        option.value = format.format_id;
+        option.text = `${format.ext} - ${format.resolution || format.format_note || 'Unknown quality'}`;
+        select.appendChild(option);
+      });
+
+      document.getElementById('result').classList.remove('hidden');
+    }
+
+    async function downloadVideo() {
+      const url = document.getElementById('video-url').value;
+      const formatId = document.getElementById('format-options').value;
+      window.location.href = `/download?url=${encodeURIComponent(url)}&format_id=${formatId}`;
+    }
+  </script>
+</body>
+</html>
