@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Any Video Downloader</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
   <style>
     body {
       margin: 0;
@@ -13,30 +13,35 @@
       color: #fff;
       overflow: hidden;
       position: relative;
+      height: 100vh;
     }
 
+    /* Floating text styles */
     .floating-text {
       position: absolute;
       color: rgba(255, 255, 255, 0.08);
-      font-size: 20px;
+      font-weight: 600;
       pointer-events: none;
       animation: float 20s linear infinite;
+      white-space: nowrap;
+      user-select: none;
     }
 
     @keyframes float {
       0% {
-        transform: translateY(100vh) translateX(0);
+        transform: translateY(0vh);
         opacity: 0;
       }
       10% {
         opacity: 1;
       }
       100% {
-        transform: translateY(-10vh) translateX(20vw);
+        transform: translateY(-120vh);
         opacity: 0;
       }
     }
 
+    /* Container box styles */
     .container {
       background-color: rgba(0, 0, 0, 0.4);
       border-radius: 15px;
@@ -89,6 +94,27 @@
       font-size: 1.2rem;
       font-weight: 600;
     }
+
+    /* Static "Mehernolan!" text inside container */
+    .signature {
+      margin-top: 2rem;
+      font-weight: 700;
+      font-size: 1.2rem;
+      color: #ffcc80;
+      user-select: none;
+    }
+
+    /* Floating container fills whole screen and sits behind main content */
+    #floating-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      z-index: 1;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
@@ -99,16 +125,18 @@
   <!-- Main Interface -->
   <div class="container">
     <h1>Universal Video Downloader</h1>
-    <input type="text" id="video-url" placeholder="Paste your video URL here...">
-    <br>
+    <input type="text" id="video-url" placeholder="Paste your video URL here..." />
+    <br />
     <button onclick="fetchInfo()">Fetch Qualities</button>
 
     <div id="result" class="hidden">
       <p class="video-title" id="title"></p>
       <select id="format-options"></select>
-      <br>
+      <br />
       <button onclick="downloadVideo()">Download</button>
     </div>
+
+    <p class="signature">Mehernolan!</p>
   </div>
 
   <script>
@@ -140,15 +168,16 @@
       window.location.href = `/download?url=${encodeURIComponent(url)}&format_id=${formatId}`;
     }
 
-    // Floating text animation
+    // Floating text animation setup
     const floatingContainer = document.getElementById("floating-container");
     const word = "mehernolan";
-    for (let i = 0; i < 40; i++) {
+
+    for (let i = 0; i < 100; i++) {
       const span = document.createElement("span");
       span.className = "floating-text";
       span.style.left = Math.random() * 100 + "vw";
-      span.style.animationDelay = Math.random() * 20 + "s";
-      span.style.fontSize = (Math.random() * 16 + 10) + "px";
+      span.style.animationDelay = (Math.random() * 20) + "s";
+      span.style.fontSize = (Math.random() * 20 + 12) + "px";
       span.innerText = word;
       floatingContainer.appendChild(span);
     }
