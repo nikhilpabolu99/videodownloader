@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Universal Video Downloader</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
@@ -12,15 +12,43 @@
       color: #fff;
       text-align: center;
       padding: 2rem;
+      overflow: hidden;
     }
+
+    .floating-text span {
+      position: absolute;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.1);
+      animation: float 20s linear infinite;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    @keyframes float {
+      0% {
+        transform: translateY(100vh) translateX(0);
+        opacity: 0;
+      }
+      50% {
+        opacity: 0.2;
+      }
+      100% {
+        transform: translateY(-100vh) translateX(20px);
+        opacity: 0;
+      }
+    }
+
     .container {
+      position: relative;
       background-color: rgba(0, 0, 0, 0.4);
       border-radius: 15px;
       padding: 2rem;
       max-width: 600px;
       margin: 0 auto;
       box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+      z-index: 2;
     }
+
     input[type="text"] {
       width: 80%;
       padding: 0.8rem;
@@ -29,6 +57,7 @@
       margin-bottom: 1rem;
       font-size: 1rem;
     }
+
     button {
       padding: 0.7rem 1.5rem;
       background-color: #ff9800;
@@ -39,26 +68,43 @@
       cursor: pointer;
       transition: background 0.3s;
     }
+
     button:hover {
       background-color: #f57c00;
     }
+
     select {
       padding: 0.5rem;
       border-radius: 8px;
       margin-top: 1rem;
       font-size: 1rem;
     }
+
     .hidden {
       display: none;
     }
+
     .video-title {
       margin-top: 1rem;
       font-size: 1.2rem;
       font-weight: 600;
     }
+
+    .floating-text {
+      position: fixed;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      overflow: hidden;
+      z-index: 1;
+    }
   </style>
 </head>
 <body>
+  <!-- Floating text background -->
+  <div class="floating-text" id="floating-container"></div>
+
   <div class="container">
     <h1>Universal Video Downloader</h1>
     <input type="text" id="video-url" placeholder="Paste your video URL here...">
@@ -78,7 +124,7 @@
       const url = document.getElementById('video-url').value;
       if (!url) return alert("Please paste a video URL");
 
-      const res = await fetch(`/fetch-info?url=" + encodeURIComponent(url));
+      const res = await fetch(`/fetch-info?url=${encodeURIComponent(url)}`);
       if (!res.ok) return alert("Error fetching video info.");
       const data = await res.json();
 
@@ -96,10 +142,21 @@
       document.getElementById('result').classList.remove('hidden');
     }
 
-    async function downloadVideo() {
+    function downloadVideo() {
       const url = document.getElementById('video-url').value;
       const formatId = document.getElementById('format-options').value;
       window.location.href = `/download?url=${encodeURIComponent(url)}&format_id=${formatId}`;
+    }
+
+    // Floating text generation
+    const floatingContainer = document.getElementById('floating-container');
+    for (let i = 0; i < 50; i++) {
+      const span = document.createElement('span');
+      span.textContent = 'mehernolan';
+      span.style.left = `${Math.random() * 100}%`;
+      span.style.animationDuration = `${10 + Math.random() * 20}s`;
+      span.style.fontSize = `${8 + Math.random() * 8}px`;
+      floatingContainer.appendChild(span);
     }
   </script>
 </body>
