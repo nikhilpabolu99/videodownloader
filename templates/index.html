@@ -118,25 +118,40 @@
       loading.innerText = "Please wait while fetching available formats...";
       document.getElementById('result').classList.add('hidden');
 
-      if (!url) return alert("Please enter a valid video URL.");
+      if (!url) {
+        alert("Please enter a valid video URL.");
+        loading.innerText = "";
+        return;
+      }
 
-      const res = await fetch(`/fetch-info?url=" + encodeURIComponent(url));
-      loading.innerText = "";
-      if (!res.ok) return alert("Error fetching video info.");
-      const data = await res.json();
+      try {
+        const res = await fetch(`/fetch-info?url=${encodeURIComponent(url)}`);
+        loading.innerText = "";
 
-      document.getElementById('title').innerText = data.title;
+        if (!res.ok) {
+          alert("Error fetching video info.");
+          return;
+        }
 
-      const select = document.getElementById('format-options');
-      select.innerHTML = '';
-      data.formats.forEach(format => {
-        const option = document.createElement('option');
-        option.value = format.format_id;
-        option.text = `${format.ext} - ${format.resolution || format.format_note || 'Unknown quality'}`;
-        select.appendChild(option);
-      });
+        const data = await res.json();
 
-      document.getElementById('result').classList.remove('hidden');
+        document.getElementById('title').innerText = data.title;
+
+        const select = document.getElementById('format-options');
+        select.innerHTML = '';
+        data.formats.forEach(format => {
+          const option = document.createElement('option');
+          option.value = format.format_id;
+          option.text = `${format.ext} - ${format.resolution || format.format_note || 'Unknown quality'}`;
+          select.appendChild(option);
+        });
+
+        document.getElementById('result').classList.remove('hidden');
+      } catch (error) {
+        loading.innerText = "";
+        alert("Failed to fetch video info.");
+        console.error(error);
+      }
     }
 
     async function downloadVideo() {
