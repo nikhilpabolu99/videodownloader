@@ -20,6 +20,11 @@ def fetch_info():
         return jsonify({'error': 'Missing URL'}), 400
 
     ydl_opts = {"quiet": True, "skip_download": True}
+
+    # Add YouTube-specific behavior if needed
+    if "youtu" in url:
+        ydl_opts["noplaylist"] = True  # Skip entire playlist unless explicitly needed
+
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
@@ -48,18 +53,23 @@ def download():
     output_path = os.path.join(DOWNLOAD_DIR, f"{uid}.%(ext)s")
 
     ydl_opts = {
-        # Merge selected video format with best audio, fallback to best if combined format not available
-        'format': f'{format_id}+bestaudio/best',
         'outtmpl': output_path,
         'merge_output_format': 'mp4',
         'quiet': True,
     }
 
+    if "youtu" in url:
+        # YouTube-specific merging of video+audio
+        ydl_opts['format'] = f'{format_id}+bestaudio/best'
+    else:
+        # Generic fallback
+        ydl_opts['format'] = format_id
+
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
 
-        # Find the downloaded file by UUID prefix
+        # Locate the downloaded file
         downloaded_file = None
         for file in os.listdir(DOWNLOAD_DIR):
             if file.startswith(uid):
@@ -75,7 +85,6 @@ def download():
 
 @app.after_request
 def cleanup(response):
-    # Clean all files in downloads after every request to keep disk clean
     for file in os.listdir(DOWNLOAD_DIR):
         try:
             os.remove(os.path.join(DOWNLOAD_DIR, file))
