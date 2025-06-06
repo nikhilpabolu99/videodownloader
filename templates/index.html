@@ -75,6 +75,13 @@
       color: #ffcc80;
       font-weight: bold;
     }
+
+    #loading {
+      font-size: 1rem;
+      margin-top: 1rem;
+      color: #ffc107;
+      font-style: italic;
+    }
   </style>
 </head>
 <body>
@@ -84,6 +91,8 @@
     <input type="text" id="video-url" placeholder="Paste your video URL here...">
     <br>
     <button onclick="fetchInfo()">Fetch Qualities</button>
+
+    <div id="loading" class="hidden">Please wait, fetching video qualities...</div>
 
     <div id="result" class="hidden">
       <p class="video-title" id="title"></p>
@@ -100,22 +109,31 @@
       const url = document.getElementById('video-url').value;
       if (!url) return alert("Please paste a video URL");
 
-      const res = await fetch(`/fetch-info?url=` + encodeURIComponent(url));
-      if (!res.ok) return alert("Error fetching video info.");
-      const data = await res.json();
+      document.getElementById('loading').classList.remove('hidden');
+      document.getElementById('result').classList.add('hidden');
 
-      document.getElementById('title').innerText = data.title;
+      try {
+        const res = await fetch(`/fetch-info?url=` + encodeURIComponent(url));
+        if (!res.ok) throw new Error("Error fetching video info.");
+        const data = await res.json();
 
-      const select = document.getElementById('format-options');
-      select.innerHTML = '';
-      data.formats.forEach(format => {
-        const option = document.createElement('option');
-        option.value = format.format_id;
-        option.text = `${format.ext} - ${format.resolution || format.format_note || 'Unknown quality'}`;
-        select.appendChild(option);
-      });
+        document.getElementById('title').innerText = data.title;
 
-      document.getElementById('result').classList.remove('hidden');
+        const select = document.getElementById('format-options');
+        select.innerHTML = '';
+        data.formats.forEach(format => {
+          const option = document.createElement('option');
+          option.value = format.format_id;
+          option.text = `${format.ext} - ${format.resolution || format.format_note || 'Unknown quality'}`;
+          select.appendChild(option);
+        });
+
+        document.getElementById('result').classList.remove('hidden');
+      } catch (error) {
+        alert("Failed to fetch video info.");
+      } finally {
+        document.getElementById('loading').classList.add('hidden');
+      }
     }
 
     async function downloadVideo() {
