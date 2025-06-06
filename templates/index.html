@@ -2,138 +2,141 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Universal Video Downloader</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Video Downloader</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
     body {
       margin: 0;
       font-family: 'Inter', sans-serif;
-      background: linear-gradient(to right, #1e3c72, #2a5298);
+      background: #121212;
       color: #fff;
       display: flex;
       justify-content: center;
       align-items: center;
-      min-height: 100vh;
+      height: 100vh;
+      flex-direction: column;
+      background-image: radial-gradient(circle at top left, #333 0%, #111 100%);
     }
 
-    .container {
-      background-color: rgba(0, 0, 0, 0.4);
-      border-radius: 15px;
+    .card {
+      background-color: #1e1e1e;
       padding: 2rem;
-      max-width: 600px;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6);
       width: 90%;
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+      max-width: 500px;
       text-align: center;
-      position: relative;
+    }
+
+    h1 {
+      margin-bottom: 1rem;
+      font-size: 1.8rem;
+      color: #ff9800;
     }
 
     input[type="text"] {
-      width: 80%;
+      width: 100%;
       padding: 0.8rem;
-      border: none;
       border-radius: 8px;
+      border: none;
       margin-bottom: 1rem;
       font-size: 1rem;
+      background: #2b2b2b;
+      color: #fff;
     }
 
     button {
-      padding: 0.7rem 1.5rem;
       background-color: #ff9800;
-      color: #fff;
+      color: white;
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
       border: none;
       border-radius: 8px;
-      font-weight: bold;
       cursor: pointer;
-      transition: background 0.3s;
+      transition: background-color 0.3s;
     }
 
     button:hover {
-      background-color: #f57c00;
-    }
-
-    select {
-      padding: 0.5rem;
-      border-radius: 8px;
-      margin-top: 1rem;
-      font-size: 1rem;
-    }
-
-    .hidden {
-      display: none;
-    }
-
-    .video-title {
-      margin-top: 1rem;
-      font-size: 1.2rem;
-      font-weight: 600;
-    }
-
-    .footer {
-      margin-top: 2rem;
-      font-size: 0.9rem;
-      color: #ffcc80;
-      font-weight: bold;
+      background-color: #e68a00;
     }
 
     #loading {
-      font-size: 1rem;
       margin-top: 1rem;
-      color: #ffc107;
-      font-style: italic;
+      font-size: 0.9rem;
+      color: #ccc;
+    }
+
+    #result {
+      margin-top: 1.5rem;
+    }
+
+    select {
+      width: 100%;
+      padding: 0.6rem;
+      margin-top: 0.5rem;
+      border-radius: 8px;
+      background: #2b2b2b;
+      color: white;
+      border: none;
+    }
+
+    .video-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-top: 1rem;
+    }
+
+    footer {
+      margin-top: 2rem;
+      font-size: 0.75rem;
+      color: #888;
     }
   </style>
 </head>
 <body>
-
-  <div class="container">
-    <h1>Universal Video Downloader</h1>
+  <div class="card">
+    <h1>Smart Video Downloader</h1>
     <input type="text" id="video-url" placeholder="Paste your video URL here...">
-    <br>
     <button onclick="fetchInfo()">Fetch Qualities</button>
-
-    <div id="loading" class="hidden">Please wait, fetching video qualities...</div>
+    <div id="loading"></div>
 
     <div id="result" class="hidden">
       <p class="video-title" id="title"></p>
       <select id="format-options"></select>
-      <br>
+      <br><br>
       <button onclick="downloadVideo()">Download</button>
     </div>
-
-    <div class="footer">Mehernolan!</div>
   </div>
+
+  <footer>Built by Mehernolan</footer>
 
   <script>
     async function fetchInfo() {
       const url = document.getElementById('video-url').value;
-      if (!url) return alert("Please paste a video URL");
-
-      document.getElementById('loading').classList.remove('hidden');
+      const loading = document.getElementById('loading');
+      loading.innerText = "Please wait while fetching available formats...";
       document.getElementById('result').classList.add('hidden');
 
-      try {
-        const res = await fetch(`/fetch-info?url=` + encodeURIComponent(url));
-        if (!res.ok) throw new Error("Error fetching video info.");
-        const data = await res.json();
+      if (!url) return alert("Please enter a valid video URL.");
 
-        document.getElementById('title').innerText = data.title;
+      const res = await fetch(`/fetch-info?url=" + encodeURIComponent(url));
+      loading.innerText = "";
+      if (!res.ok) return alert("Error fetching video info.");
+      const data = await res.json();
 
-        const select = document.getElementById('format-options');
-        select.innerHTML = '';
-        data.formats.forEach(format => {
-          const option = document.createElement('option');
-          option.value = format.format_id;
-          option.text = `${format.ext} - ${format.resolution || format.format_note || 'Unknown quality'}`;
-          select.appendChild(option);
-        });
+      document.getElementById('title').innerText = data.title;
 
-        document.getElementById('result').classList.remove('hidden');
-      } catch (error) {
-        alert("Failed to fetch video info.");
-      } finally {
-        document.getElementById('loading').classList.add('hidden');
-      }
+      const select = document.getElementById('format-options');
+      select.innerHTML = '';
+      data.formats.forEach(format => {
+        const option = document.createElement('option');
+        option.value = format.format_id;
+        option.text = `${format.ext} - ${format.resolution || format.format_note || 'Unknown quality'}`;
+        select.appendChild(option);
+      });
+
+      document.getElementById('result').classList.remove('hidden');
     }
 
     async function downloadVideo() {
