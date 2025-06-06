@@ -1,4 +1,3 @@
-# app.py
 from flask import Flask, request, jsonify, send_file, render_template
 import yt_dlp
 import os
@@ -28,8 +27,7 @@ def fetch_info():
                 {
                     "format_id": f["format_id"],
                     "ext": f["ext"],
-                    "resolution": f.get("height", "audio") or "audio",
-                    "format_note": f.get("format_note", "")
+                    "resolution": f.get("height") or f.get("format_note") or "audio",
                 }
                 for f in info['formats']
                 if f.get("vcodec") != "none" or f.get("acodec") != "none"
@@ -50,6 +48,7 @@ def download():
     output_path = os.path.join(DOWNLOAD_DIR, f"{uid}.%(ext)s")
 
     ydl_opts = {
+        # Merge selected video format with best audio, fallback to best if combined format not available
         'format': f'{format_id}+bestaudio/best',
         'outtmpl': output_path,
         'merge_output_format': 'mp4',
@@ -60,7 +59,7 @@ def download():
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
 
-        # Find the downloaded file
+        # Find the downloaded file by UUID prefix
         downloaded_file = None
         for file in os.listdir(DOWNLOAD_DIR):
             if file.startswith(uid):
@@ -76,8 +75,12 @@ def download():
 
 @app.after_request
 def cleanup(response):
+    # Clean all files in downloads after every request to keep disk clean
     for file in os.listdir(DOWNLOAD_DIR):
-        os.remove(os.path.join(DOWNLOAD_DIR, file))
+        try:
+            os.remove(os.path.join(DOWNLOAD_DIR, file))
+        except Exception:
+            pass
     return response
 
 if __name__ == '__main__':
