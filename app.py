@@ -107,47 +107,38 @@ def download():
     elif is_instagram and os.path.exists(INSTAGRAM_COOKIES):
         ydl_opts['cookiefile'] = INSTAGRAM_COOKIES
 
-    if is_instagram:
+    try:
+        # Pre-check info for video/audio status
+        with yt_dlp.YoutubeDL({'quiet': True, 'nocheckcertificate': True}) as ydl:
+            info = ydl.extract_info(url, download=False)
+            selected_format = next((f for f in info['formats'] if f['format_id'] == format_id), None)
+
+            if not selected_format:
+                return "Format not found", 400
+
+            has_video = selected_format.get('vcodec') != 'none'
+            has_audio = selected_format.get('acodec') != 'none'
+
+            if has_video and not has_audio:
+                # Merge with best audio
+                ydl_opts['format'] = f"{format_id}+bestaudio/best"
+                ydl_opts['merge_output_format'] = 'mp4'
+            else:
+                ydl_opts['format'] = format_id
+
+    except Exception as e:
+        print(f"Error processing format for URL {url}: {e}")
         ydl_opts['format'] = format_id
-
-    elif is_youtube:
-        try:
-            with yt_dlp.YoutubeDL({'quiet': True, 'nocheckcertificate': True}) as ydl:
-                info = ydl.extract_info(url, download=False)
-                selected_format = None
-                for f in info['formats']:
-                    if f['format_id'] == format_id:
-                        selected_format = f
-                        break
-
-                if not selected_format:
-                    return "Format not found", 400
-
-                is_video_only = (selected_format.get('vcodec') != 'none' and selected_format.get('acodec') == 'none')
-
-                if is_video_only:
-                    ydl_opts['format'] = f"{format_id}+bestaudio/best"
-                    ydl_opts['merge_output_format'] = 'mp4'
-                else:
-                    ydl_opts['format'] = format_id
-        except Exception as e:
-            print(f"Error processing YouTube format: {e}")
-            ydl_opts['format'] = format_id
-            ydl_opts['merge_output_format'] = 'mp4'
-
-    else:
-        ydl_opts['format'] = f"{format_id}+bestaudio/best"
         ydl_opts['merge_output_format'] = 'mp4'
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
 
-        downloaded_file = None
-        for file in os.listdir(DOWNLOAD_DIR):
-            if file.startswith(uid):
-                downloaded_file = os.path.join(DOWNLOAD_DIR, file)
-                break
+        downloaded_file = next(
+            (os.path.join(DOWNLOAD_DIR, file) for file in os.listdir(DOWNLOAD_DIR) if file.startswith(uid)),
+            None
+        )
 
         if not downloaded_file:
             return "Download failed", 500
