@@ -59,9 +59,9 @@ def fetch_info():
                     
                     label = "audio only"
                 elif vcodec != "None" and (acodec == "None" or not acodec):
-                    label = "video only"
+                    label = "video + audio"
                 else:
-                    label = "audio + video"
+                    label = "video only"
 
                 formats.append({
                     "format_id": f["format_id"],
