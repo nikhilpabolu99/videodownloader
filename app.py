@@ -1,7 +1,7 @@
 from flask import Flask, render_template, request
 from extractor import extract_video_data_from_url
 from settings import FEATURES, FAQS
-
+import os
 app = Flask(__name__)
 
 
@@ -25,5 +25,6 @@ def download():
                            faqs=FAQS)
 
 
-if __name__ == "__main__":
-    app.run(debug=True)
+if __name__ == '__main__':
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
