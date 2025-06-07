@@ -58,7 +58,7 @@ def fetch_info():
                 if vcodec == "none" and acodec != "none":
                     
                     label = "audio only"
-                elif vcodec != "none" and (acodec == "none" or not acodec):
+                elif vcodec != "None" and (acodec == "None" or not acodec):
                     label = "video only"
                 else:
                     label = "audio + video"
@@ -120,8 +120,8 @@ def download():
 
             vcodec = selected_format.get('vcodec')
             acodec = selected_format.get('acodec')
-            has_video = vcodec and vcodec != 'none'
-            has_audio = acodec and acodec != 'none'
+            has_video = vcodec and vcodec != 'None'
+            has_audio = acodec and acodec != 'None'
 
             if has_video and not has_audio:
                 ydl_opts['format'] = f"{format_id}+bestaudio"
