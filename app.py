@@ -47,19 +47,25 @@ def download():
     uid = str(uuid4())
     output_path = os.path.join(DOWNLOAD_DIR, f"{uid}.%(ext)s")
 
+    is_instagram = 'instagram' in url.lower()
+    is_youtube = 'youtu' in url.lower() or 'youtube' in url.lower()
+
+    # yt_dlp options
     ydl_opts = {
-        # Merge selected video format with best audio, fallback to best if combined format not available
-        'format': f'{format_id}+bestaudio/best',
+        'format': f'{format_id}+bestaudio/best' if not is_instagram else f'{format_id}',
         'outtmpl': output_path,
-        'merge_output_format': 'mp4',
         'quiet': True,
     }
+
+    # Only merge for non-Instagram sources
+    if not is_instagram:
+        ydl_opts['merge_output_format'] = 'mp4'
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
 
-        # Find the downloaded file by UUID prefix
+        # Locate downloaded file
         downloaded_file = None
         for file in os.listdir(DOWNLOAD_DIR):
             if file.startswith(uid):
@@ -70,12 +76,13 @@ def download():
             return "Download failed", 500
 
         return send_file(downloaded_file, as_attachment=True)
+
     except Exception as e:
         return str(e), 500
 
 @app.after_request
 def cleanup(response):
-    # Clean all files in downloads after every request to keep disk clean
+    # Clean up all files after each request
     for file in os.listdir(DOWNLOAD_DIR):
         try:
             os.remove(os.path.join(DOWNLOAD_DIR, file))
