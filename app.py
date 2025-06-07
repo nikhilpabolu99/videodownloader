@@ -63,12 +63,12 @@ def fetch_info():
                     label = "video + audio"
                 else:
                     label = "video only"
-
+                #"label": f"{label} (vcodec: {vcodec}, acodec: {acodec})"
                 formats.append({
                     "format_id": f["format_id"],
                     "ext": f["ext"],
                     "resolution": f.get("height") or f.get("format_note") or "unknown",
-                    "label": f"{label} (vcodec: {vcodec}, acodec: {acodec})"
+                    "label": f"{label}"
                 })
 
             return jsonify({"title": info.get("title", ""), "formats": formats})
