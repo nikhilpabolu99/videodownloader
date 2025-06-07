@@ -67,7 +67,7 @@ def fetch_info():
                     "format_id": f["format_id"],
                     "ext": f["ext"],
                     "resolution": f.get("height") or f.get("format_note") or "unknown",
-                    "label": label
+                    "label": f"{label} (vcodec: {vcodec}, acodec: {acodec})"
                 })
 
             return jsonify({"title": info.get("title", ""), "formats": formats})
