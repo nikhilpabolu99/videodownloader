@@ -59,7 +59,7 @@ def fetch_info():
                     
                     label = "audio only"
                 elif vcodec != "none" and (acodec == "none" or not acodec):
-                    label = "video + audio"
+                    label = "video only"
                 else:
                     label = "audio + video"
 
