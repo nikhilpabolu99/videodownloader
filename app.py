@@ -50,15 +50,25 @@ def fetch_info():
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
-            formats = [
-                {
+            formats = []
+            for f in info['formats']:
+                vcodec = f.get("vcodec")
+                acodec = f.get("acodec")
+
+                if vcodec == "none" and acodec != "none":
+                    label = "audio only"
+                elif vcodec != "none" and (acodec == "none" or not acodec):
+                    label = "video only"
+                else:
+                    label = "audio + video"
+
+                formats.append({
                     "format_id": f["format_id"],
                     "ext": f["ext"],
-                    "resolution": f.get("height") or f.get("format_note") or "audio",
-                }
-                for f in info['formats']
-                if (f.get("vcodec") != "none" or f.get("acodec") != "none")
-            ]
+                    "resolution": f.get("height") or f.get("format_note") or "unknown",
+                    "label": label
+                })
+
             return jsonify({"title": info.get("title", ""), "formats": formats})
     except Exception as e:
         print(f"Error fetching info for URL {url}: {e}")
@@ -73,11 +83,10 @@ def download():
     if not url or not format_id:
         return "Missing parameters", 400
 
-    # Log IP + timestamp
     user_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     log_entry = f"[{timestamp}] IP: {user_ip} | URL: {url} | Format ID: {format_id}\n"
-    print(log_entry.strip())  # Log to Render console
+    print(log_entry.strip())
 
     uid = str(uuid4())
     output_path = os.path.join(DOWNLOAD_DIR, f"{uid}.%(ext)s")
@@ -95,14 +104,12 @@ def download():
         }
     }
 
-    # Add cookie files if exist
     if is_youtube and os.path.exists(YOUTUBE_COOKIES):
         ydl_opts['cookiefile'] = YOUTUBE_COOKIES
     elif is_instagram and os.path.exists(INSTAGRAM_COOKIES):
         ydl_opts['cookiefile'] = INSTAGRAM_COOKIES
 
     try:
-        # Extract info to detect if selected format is video-only
         with yt_dlp.YoutubeDL({'quiet': True, 'nocheckcertificate': True}) as ydl:
             info = ydl.extract_info(url, download=False)
             selected_format = next((f for f in info['formats'] if f['format_id'] == format_id), None)
@@ -115,7 +122,6 @@ def download():
             has_video = vcodec and vcodec != 'none'
             has_audio = acodec and acodec != 'none'
 
-            # If video-only format, merge bestaudio
             if has_video and not has_audio:
                 ydl_opts['format'] = f"{format_id}+bestaudio"
                 ydl_opts['merge_output_format'] = 'mp4'
@@ -129,7 +135,6 @@ def download():
         ydl_opts['format'] = format_id
         ydl_opts['merge_output_format'] = 'mp4'
 
-    # Download file
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
