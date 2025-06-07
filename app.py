@@ -3,6 +3,7 @@ import yt_dlp
 import os
 from uuid import uuid4
 from urllib.parse import unquote
+import traceback
 
 app = Flask(__name__)
 
@@ -18,6 +19,7 @@ USER_AGENT = (
 @app.route('/')
 def index():
     return render_template('index.html')
+
 
 @app.route('/fetch-info')
 def fetch_info():
@@ -49,6 +51,7 @@ def fetch_info():
             return jsonify({"title": info.get("title", ""), "formats": formats})
     except Exception as e:
         print(f"Error fetching info for URL {url}: {e}")
+        traceback.print_exc()
         return jsonify({"error": f"Failed to extract info: {str(e)}"}), 500
 
 
@@ -77,25 +80,19 @@ def download():
     }
 
     if is_instagram:
-        # Instagram: download selected format as is, no merge
+        # Instagram: just download selected format (no merging)
         ydl_opts['format'] = format_id
 
     elif is_youtube:
-        # For YouTube, check format type: if only video, merge with best audio
+        # YouTube: check if selected format is video-only; if yes, merge with best audio
         try:
-            # Extract info to check format details
             with yt_dlp.YoutubeDL({'quiet': True, 'nocheckcertificate': True}) as ydl:
                 info = ydl.extract_info(url, download=False)
-                selected_format = None
-                for f in info['formats']:
-                    if f['format_id'] == format_id:
-                        selected_format = f
-                        break
+                selected_format = next((f for f in info['formats'] if f['format_id'] == format_id), None)
 
                 if not selected_format:
                     return "Format not found", 400
 
-                # Check if selected format is video-only (no audio)
                 is_video_only = (selected_format.get('vcodec') != 'none' and selected_format.get('acodec') == 'none')
 
                 if is_video_only:
@@ -105,12 +102,13 @@ def download():
                     ydl_opts['format'] = format_id
         except Exception as e:
             print(f"Error processing YouTube format: {e}")
-            # fallback to simple format download
+            traceback.print_exc()
+            # fallback to basic format download
             ydl_opts['format'] = format_id
             ydl_opts['merge_output_format'] = 'mp4'
 
     else:
-        # Other URLs: merge selected format with best audio if possible
+        # Other URLs: attempt to merge selected format with best audio
         ydl_opts['format'] = f"{format_id}+bestaudio/best"
         ydl_opts['merge_output_format'] = 'mp4'
 
@@ -118,6 +116,7 @@ def download():
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
 
+        # Find the downloaded file in DOWNLOAD_DIR starting with uid
         downloaded_file = None
         for file in os.listdir(DOWNLOAD_DIR):
             if file.startswith(uid):
@@ -125,18 +124,19 @@ def download():
                 break
 
         if not downloaded_file:
-            return "Download failed", 500
+            return "Download failed: File not found after download", 500
 
         return send_file(downloaded_file, as_attachment=True)
 
     except Exception as e:
         print(f"Error downloading URL {url}: {e}")
-        return str(e), 500
+        traceback.print_exc()
+        return f"Download failed: {str(e)}", 500
 
 
 @app.after_request
 def cleanup(response):
-    # Clean up all files after each request to keep disk clean
+    # Clean up all files in downloads after each request to keep disk clean
     for file in os.listdir(DOWNLOAD_DIR):
         try:
             os.remove(os.path.join(DOWNLOAD_DIR, file))
