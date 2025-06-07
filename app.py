@@ -3,11 +3,16 @@ import yt_dlp
 import os
 from uuid import uuid4
 from urllib.parse import unquote
+from datetime import datetime
 
 app = Flask(__name__)
 
 DOWNLOAD_DIR = "downloads"
+LOG_DIR = "logs"
+LOG_FILE = os.path.join(LOG_DIR, "download_logs.txt")
+
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+os.makedirs(LOG_DIR, exist_ok=True)
 
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -71,6 +76,15 @@ def download():
 
     if not url or not format_id:
         return "Missing parameters", 400
+
+    # Get user IP
+    user_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    # Log to file
+    log_entry = f"[{timestamp}] IP: {user_ip} | URL: {url} | Format ID: {format_id}\n"
+    with open(LOG_FILE, "a") as log:
+        log.write(log_entry)
 
     uid = str(uuid4())
     output_path = os.path.join(DOWNLOAD_DIR, f"{uid}.%(ext)s")
