@@ -31,7 +31,8 @@ def fetch_info():
         "nocheckcertificate": True,
         "http_headers": {
             "User-Agent": USER_AGENT
-        }
+        },
+        'cookiefile': 'cookies.txt',
     }
 
     try:
@@ -76,10 +77,10 @@ def download():
         }],
         'http_headers': {
             "User-Agent": USER_AGENT
-        }
+        },
+        'cookiefile': 'cookies.txt',
     }
 
-    # YouTube logic: always use bestvideo+bestaudio safely
     if is_youtube:
         ydl_opts['format'] = 'bestvideo+bestaudio/best'
     elif is_instagram:
@@ -106,7 +107,6 @@ def download():
 
 @app.after_request
 def cleanup(response):
-    # Clean up downloads
     for file in os.listdir(DOWNLOAD_DIR):
         try:
             os.remove(os.path.join(DOWNLOAD_DIR, file))
