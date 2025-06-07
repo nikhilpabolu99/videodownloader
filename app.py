@@ -54,11 +54,12 @@ def fetch_info():
             for f in info['formats']:
                 vcodec = f.get("vcodec")
                 acodec = f.get("acodec")
-
+                print(f"vcodec:{vcodec},acodec:{acodec}")
                 if vcodec == "none" and acodec != "none":
+                    
                     label = "audio only"
                 elif vcodec != "none" and (acodec == "none" or not acodec):
-                    label = "video only"
+                    label = "video + audio"
                 else:
                     label = "audio + video"
 
