@@ -8,11 +8,7 @@ from datetime import datetime
 app = Flask(__name__)
 
 DOWNLOAD_DIR = "downloads"
-LOG_DIR = "logs"
-LOG_FILE = os.path.join(LOG_DIR, "download_logs.txt")
-
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-os.makedirs(LOG_DIR, exist_ok=True)
 
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -77,14 +73,11 @@ def download():
     if not url or not format_id:
         return "Missing parameters", 400
 
-    # Get user IP
+    # Log IP + timestamp
     user_ip = request.headers.get('X-Forwarded-For', request.remote_addr)
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    # Log to file
     log_entry = f"[{timestamp}] IP: {user_ip} | URL: {url} | Format ID: {format_id}\n"
-    with open(LOG_FILE, "a") as log:
-        log.write(log_entry)
+    print(log_entry.strip())  # Log to Render console
 
     uid = str(uuid4())
     output_path = os.path.join(DOWNLOAD_DIR, f"{uid}.%(ext)s")
@@ -102,13 +95,14 @@ def download():
         }
     }
 
+    # Add cookie files if exist
     if is_youtube and os.path.exists(YOUTUBE_COOKIES):
         ydl_opts['cookiefile'] = YOUTUBE_COOKIES
     elif is_instagram and os.path.exists(INSTAGRAM_COOKIES):
         ydl_opts['cookiefile'] = INSTAGRAM_COOKIES
 
     try:
-        # Pre-check info for video/audio status
+        # Extract info to detect if selected format is video-only
         with yt_dlp.YoutubeDL({'quiet': True, 'nocheckcertificate': True}) as ydl:
             info = ydl.extract_info(url, download=False)
             selected_format = next((f for f in info['formats'] if f['format_id'] == format_id), None)
@@ -116,21 +110,26 @@ def download():
             if not selected_format:
                 return "Format not found", 400
 
-            has_video = selected_format.get('vcodec') != 'none'
-            has_audio = selected_format.get('acodec') != 'none'
+            vcodec = selected_format.get('vcodec')
+            acodec = selected_format.get('acodec')
+            has_video = vcodec and vcodec != 'none'
+            has_audio = acodec and acodec != 'none'
 
+            # If video-only format, merge bestaudio
             if has_video and not has_audio:
-                # Merge with best audio
-                ydl_opts['format'] = f"{format_id}+bestaudio/best"
+                ydl_opts['format'] = f"{format_id}+bestaudio"
                 ydl_opts['merge_output_format'] = 'mp4'
+                print(f"Downloading as: mp4-{format_id}+bestaudio")
             else:
                 ydl_opts['format'] = format_id
+                print(f"Downloading as: mp4-{format_id}")
 
     except Exception as e:
-        print(f"Error processing format for URL {url}: {e}")
+        print(f"Error getting format info: {e}")
         ydl_opts['format'] = format_id
         ydl_opts['merge_output_format'] = 'mp4'
 
+    # Download file
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
@@ -146,7 +145,7 @@ def download():
         return send_file(downloaded_file, as_attachment=True)
 
     except Exception as e:
-        print(f"Error downloading URL {url}: {e}")
+        print(f"Download error for {url}: {e}")
         return str(e), 500
 
 
