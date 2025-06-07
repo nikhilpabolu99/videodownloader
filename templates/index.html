@@ -142,7 +142,7 @@
         data.formats.forEach(format => {
           const option = document.createElement('option');
           option.value = format.format_id;
-          option.text = `${format.ext} - ${format.resolution || format.format_note || 'Unknown quality'} (${format.label})`;
+          option.text = `${format.ext} - ${format.resolution || format.format_note || 'Unknown quality'} (${format.label}) [vcodec: ${vcodec}, acodec: ${acodec}]`;
           select.appendChild(option);
         });
 
