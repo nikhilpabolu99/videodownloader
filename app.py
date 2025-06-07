@@ -15,6 +15,9 @@ USER_AGENT = (
     "Chrome/114.0.0.0 Safari/537.36"
 )
 
+YOUTUBE_COOKIES = "yt_cookies.txt"
+INSTAGRAM_COOKIES = "ig_cookies.txt"
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -25,15 +28,23 @@ def fetch_info():
     if not url:
         return jsonify({'error': 'Missing URL'}), 400
 
+    url_lower = url.lower()
+    is_youtube = 'youtu' in url_lower
+    is_instagram = 'instagram' in url_lower
+
     ydl_opts = {
         "quiet": True,
         "skip_download": True,
         "nocheckcertificate": True,
         "http_headers": {
             "User-Agent": USER_AGENT
-        },
-        'cookiefile': 'cookies.txt',
+        }
     }
+
+    if is_youtube and os.path.exists(YOUTUBE_COOKIES):
+        ydl_opts["cookiefile"] = YOUTUBE_COOKIES
+    elif is_instagram and os.path.exists(INSTAGRAM_COOKIES):
+        ydl_opts["cookiefile"] = INSTAGRAM_COOKIES
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -52,49 +63,77 @@ def fetch_info():
         print(f"Error fetching info for URL {url}: {e}")
         return jsonify({"error": f"Failed to extract info: {str(e)}"}), 500
 
+
 @app.route('/download')
 def download():
     url = unquote(request.args.get("url", ""))
     format_id = request.args.get("format_id")
 
-    if not url:
-        return "Missing URL", 400
+    if not url or not format_id:
+        return "Missing parameters", 400
 
     uid = str(uuid4())
     output_path = os.path.join(DOWNLOAD_DIR, f"{uid}.%(ext)s")
 
-    is_youtube = 'youtu' in url.lower()
-    is_instagram = 'instagram' in url.lower()
+    url_lower = url.lower()
+    is_instagram = 'instagram' in url_lower
+    is_youtube = 'youtu' in url_lower or 'youtube' in url_lower
 
     ydl_opts = {
         'outtmpl': output_path,
         'quiet': True,
         'nocheckcertificate': True,
-        'merge_output_format': 'mp4',
-        'postprocessors': [{
-            'key': 'FFmpegVideoConvertor',
-            'preferedformat': 'mp4',
-        }],
         'http_headers': {
             "User-Agent": USER_AGENT
-        },
-        'cookiefile': 'cookies.txt',
+        }
     }
 
-    if is_youtube:
-        ydl_opts['format'] = 'bestvideo+bestaudio/best'
-    elif is_instagram:
-        ydl_opts['format'] = format_id if format_id else 'best'
+    if is_youtube and os.path.exists(YOUTUBE_COOKIES):
+        ydl_opts['cookiefile'] = YOUTUBE_COOKIES
+    elif is_instagram and os.path.exists(INSTAGRAM_COOKIES):
+        ydl_opts['cookiefile'] = INSTAGRAM_COOKIES
+
+    if is_instagram:
+        ydl_opts['format'] = format_id
+
+    elif is_youtube:
+        try:
+            with yt_dlp.YoutubeDL({'quiet': True, 'nocheckcertificate': True}) as ydl:
+                info = ydl.extract_info(url, download=False)
+                selected_format = None
+                for f in info['formats']:
+                    if f['format_id'] == format_id:
+                        selected_format = f
+                        break
+
+                if not selected_format:
+                    return "Format not found", 400
+
+                is_video_only = (selected_format.get('vcodec') != 'none' and selected_format.get('acodec') == 'none')
+
+                if is_video_only:
+                    ydl_opts['format'] = f"{format_id}+bestaudio/best"
+                    ydl_opts['merge_output_format'] = 'mp4'
+                else:
+                    ydl_opts['format'] = format_id
+        except Exception as e:
+            print(f"Error processing YouTube format: {e}")
+            ydl_opts['format'] = format_id
+            ydl_opts['merge_output_format'] = 'mp4'
+
     else:
-        ydl_opts['format'] = f"{format_id}+bestaudio/best" if format_id else 'best'
+        ydl_opts['format'] = f"{format_id}+bestaudio/best"
+        ydl_opts['merge_output_format'] = 'mp4'
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([url])
 
-        downloaded_file = next(
-            (os.path.join(DOWNLOAD_DIR, file) for file in os.listdir(DOWNLOAD_DIR) if file.startswith(uid)), None
-        )
+        downloaded_file = None
+        for file in os.listdir(DOWNLOAD_DIR):
+            if file.startswith(uid):
+                downloaded_file = os.path.join(DOWNLOAD_DIR, file)
+                break
 
         if not downloaded_file:
             return "Download failed", 500
@@ -105,6 +144,7 @@ def download():
         print(f"Error downloading URL {url}: {e}")
         return str(e), 500
 
+
 @app.after_request
 def cleanup(response):
     for file in os.listdir(DOWNLOAD_DIR):
@@ -113,6 +153,7 @@ def cleanup(response):
         except Exception:
             pass
     return response
+
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
