@@ -28,11 +28,9 @@ def fetch_info():
                     "format_id": f["format_id"],
                     "ext": f["ext"],
                     "resolution": f.get("height") or f.get("format_note") or "audio",
-                    "vcodec": f.get("vcodec", "none"),
-                    "acodec": f.get("acodec", "none")
                 }
                 for f in info['formats']
-                if f.get("vcodec") != "none" or f.get("acodec") != "none"
+                if (f.get("vcodec") != "none" or f.get("acodec") != "none")
             ]
             return jsonify({"title": info.get("title", ""), "formats": formats})
     except Exception as e:
@@ -49,60 +47,94 @@ def download():
     uid = str(uuid4())
     output_path = os.path.join(DOWNLOAD_DIR, f"{uid}.%(ext)s")
 
-    is_instagram = 'instagram' in url.lower()
-    is_youtube = 'youtu' in url.lower() or 'youtube' in url.lower()
+    url_lower = url.lower()
+    is_instagram = 'instagram' in url_lower
+    is_youtube = 'youtu' in url_lower or 'youtube' in url_lower
+    is_facebook = 'facebook' in url_lower or 'fb.watch' in url_lower
 
-    # Fetch full format info
     try:
-        with yt_dlp.YoutubeDL({'quiet': True}) as ydl:
-            info = ydl.extract_info(url, download=False)
-            selected_format = next((f for f in info['formats'] if f['format_id'] == format_id), None)
-            vcodec = selected_format.get("vcodec", "none")
-            acodec = selected_format.get("acodec", "none")
-    except Exception as e:
-        return f"Error retrieving format: {e}", 500
+        if is_youtube:
+            # Get info first to check format details
+            with yt_dlp.YoutubeDL({"quiet": True}) as ydl:
+                info = ydl.extract_info(url, download=False)
 
-    # Build ydl_opts based on content type
-    if is_instagram:
-        ydl_opts = {
-            'format': format_id,
-            'outtmpl': output_path,
-            'quiet': True,
-        }
-    elif is_youtube and vcodec != 'none' and acodec == 'none':
-        ydl_opts = {
-            'format': f"{format_id}+bestaudio",
-            'outtmpl': output_path,
-            'merge_output_format': 'mp4',
-            'quiet': True,
-        }
-    else:
-        ydl_opts = {
-            'format': format_id,
-            'outtmpl': output_path,
-            'merge_output_format': 'mp4',
-            'quiet': True,
-        }
+            # Find selected format details
+            selected_format = None
+            for f in info['formats']:
+                if f['format_id'] == format_id:
+                    selected_format = f
+                    break
 
-    # Perform download
-    try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([url])
+            if not selected_format:
+                return "Selected format not found", 400
 
-        downloaded_file = next(
-            (os.path.join(DOWNLOAD_DIR, f) for f in os.listdir(DOWNLOAD_DIR) if f.startswith(uid)),
-            None
-        )
+            ydl_opts = {
+                'outtmpl': output_path,
+                'quiet': True,
+            }
+
+            # Check if video only (no audio)
+            video_only = (selected_format.get("vcodec") != "none" and selected_format.get("acodec") == "none")
+
+            if video_only:
+                # merge video with best audio
+                ydl_opts['format'] = f"{format_id}+bestaudio/best"
+                ydl_opts['merge_output_format'] = 'mp4'
+            else:
+                ydl_opts['format'] = format_id
+
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([url])
+
+        elif is_instagram:
+            # Instagram: no merge, no forcing format
+            ydl_opts = {
+                'outtmpl': output_path,
+                'quiet': True,
+            }
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([url])
+
+        elif is_facebook:
+            # Facebook: merge best video+audio
+            ydl_opts = {
+                'format': f'{format_id}+bestaudio/best',
+                'outtmpl': output_path,
+                'merge_output_format': 'mp4',
+                'quiet': True,
+            }
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([url])
+
+        else:
+            # Other URLs: default merge
+            ydl_opts = {
+                'format': f'{format_id}+bestaudio/best',
+                'outtmpl': output_path,
+                'merge_output_format': 'mp4',
+                'quiet': True,
+            }
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([url])
+
+        # Find downloaded file
+        downloaded_file = None
+        for file in os.listdir(DOWNLOAD_DIR):
+            if file.startswith(uid):
+                downloaded_file = os.path.join(DOWNLOAD_DIR, file)
+                break
 
         if not downloaded_file:
             return "Download failed", 500
 
         return send_file(downloaded_file, as_attachment=True)
+
     except Exception as e:
         return str(e), 500
 
 @app.after_request
 def cleanup(response):
+    # Clean up all downloaded files after every request to save space
     for file in os.listdir(DOWNLOAD_DIR):
         try:
             os.remove(os.path.join(DOWNLOAD_DIR, file))
