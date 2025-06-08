@@ -67,9 +67,10 @@ def fetch_info():
                 formats.append({
                     "format_id": f["format_id"],
                     "ext": f["ext"],
-                    "resolution": f.get("height") or f.get("format_note") or "unknown",
+                    "resolution": f"{f.get('height', 'unknown')}p" if f.get("height") else "unknown",
                     "label": f"{label}"
                 })
+
 
             return jsonify({"title": info.get("title", ""), "formats": formats})
     except Exception as e:
