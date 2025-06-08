@@ -50,27 +50,38 @@ def fetch_info():
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=False)
-            print(f"info:{info}")
             formats = []
-            for f in info['formats']:
-                vcodec = f.get("vcodec")
-                acodec = f.get("acodec")
-                #print(f"vcodec:{vcodec},acodec:{acodec}")
-                if vcodec == "none" and acodec != "none":
-                    
-                    label = "audio only"
-                elif vcodec != "None" and (acodec == "None" or not acodec):
-                    label = "video + audio"
-                else:
-                    label = "video only"
-                #"label": f"{label} (vcodec: {vcodec}, acodec: {acodec})"
-                formats.append({
-                    "format_id": f["format_id"],
-                    "ext": f["ext"],
-                    "resolution": f"{f.get('height', 'unknown')}p" if f.get("height") else "unknown",
-                    "label": f"{label}"
-                })
 
+            if is_youtube:
+                # Simplified YouTube-only format list
+                for f in info['formats']:
+                    height = f.get('height')
+                    if height:
+                        formats.append({
+                            "format_id": f["format_id"],
+                            "ext": f["ext"],
+                            "resolution": f"{height}p",
+                            "label": "video"
+                        })
+            else:
+                # Detailed for others (e.g. Instagram)
+                for f in info['formats']:
+                    vcodec = f.get("vcodec")
+                    acodec = f.get("acodec")
+
+                    if vcodec == "none" and acodec != "none":
+                        label = "audio only"
+                    elif vcodec != "none" and (acodec == "none" or not acodec):
+                        label = "video only"
+                    else:
+                        label = "video + audio"
+
+                    formats.append({
+                        "format_id": f["format_id"],
+                        "ext": f["ext"],
+                        "resolution": f"{f.get('height', 'unknown')}p" if f.get("height") else "unknown",
+                        "label": label
+                    })
 
             return jsonify({"title": info.get("title", ""), "formats": formats})
     except Exception as e:
@@ -120,18 +131,23 @@ def download():
             if not selected_format:
                 return "Format not found", 400
 
-            vcodec = selected_format.get('vcodec')
-            acodec = selected_format.get('acodec')
-            has_video = vcodec and vcodec != 'None'
-            has_audio = acodec and acodec != 'None'
-
-            if has_video and not has_audio:
-                ydl_opts['format'] = f"{format_id}+bestaudio"
-                ydl_opts['merge_output_format'] = 'mp4'
-                print(f"Downloading as: mp4-{format_id}+bestaudio")
-            else:
+            if is_youtube:
                 ydl_opts['format'] = format_id
-                print(f"Downloading as: mp4-{format_id}")
+                ydl_opts['merge_output_format'] = 'mp4'
+                print(f"Downloading YouTube: {format_id}")
+            else:
+                vcodec = selected_format.get('vcodec')
+                acodec = selected_format.get('acodec')
+                has_video = vcodec and vcodec != 'none'
+                has_audio = acodec and acodec != 'none'
+
+                if has_video and not has_audio:
+                    ydl_opts['format'] = f"{format_id}+bestaudio"
+                    ydl_opts['merge_output_format'] = 'mp4'
+                    print(f"Downloading as: mp4-{format_id}+bestaudio")
+                else:
+                    ydl_opts['format'] = format_id
+                    print(f"Downloading as: mp4-{format_id}")
 
     except Exception as e:
         print(f"Error getting format info: {e}")
